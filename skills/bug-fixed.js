@@ -75,7 +75,13 @@ module.exports = function(controller) {
                     "100", 
                     "laughing", 
                     "smile", 
-                    "joy"];
+                    "joy",
+                    "bananadance",
+                    "clapping",
+                    "metal2",
+                    "1up",
+                    "coin",
+                    "plusone"];
 
 
       bot.reply(message, rand(complement) + " " + ":" + rand(emojis) + ":");

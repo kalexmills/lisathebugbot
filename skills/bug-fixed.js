@@ -53,13 +53,17 @@ module.exports = function(controller) {
   });
 
   // user ids of users who lisa will listen to... to prevent cheating this should only
-  // include rthe user ids of verified jira bots.
+  // include the user ids of verified jira bots.
   var allowed_users = ["B72TB8DSA",  // BridgeBot
+                       "U6W8FJ75F" , // Alex Mills
                       ];
   
   // Record a bug count whenever the Jira integration announces a transition.
-  controller.hears(['([A-Za-z]+) ([A-Za-z]+) changed Bug (.*) from .* to "Resolved"'],['message_received','direct_message'],function(bot,message) {
-    if(allowed_users.includes(message.user)) {
+  controller.hears(['([A-Za-z]+) ([A-Za-z]+) changed Bug (.*) from .* to "Resolved"'], 'ambient,bot_message',
+                   function(bot,message) {
+    console.log("Received a bug resolution message!");
+    console.log(message);
+    if(message.type === 'bot_message' || allowed_users.includes(message.user)) {
 
       // reply with a random emoji / complement combination
       var person = message.match[1];

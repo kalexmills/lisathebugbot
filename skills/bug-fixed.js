@@ -3,7 +3,7 @@ var debug = require('debug')('botkit:bug_fixed');
 module.exports = function(controller) {
   
   // check my squish score
-  controller.hears(['count', 'score', 'bugs', 'killcount', 'squishscore', 'bugs', 'number'], 
+  controller.hears(['count', 'score', 'bugs', 'killcount', 'squishscore', 'number'], 
                    ['message_received','direct_message'], function(bot, message){
     bot.api.users.info({user: message.user}, (error, response) => {
       let {name, real_name} = response.user;
@@ -54,19 +54,28 @@ module.exports = function(controller) {
 
   // user ids of users who lisa will listen to... to prevent cheating this should only
   // include the user ids of verified jira bots.
-  var allowed_users = ["B72TB8DSA",  // BridgeBot
-                       "U6W8FJ75F" , // Alex Mills
-                      ];
+  // TODO: consider whether this feature is worth it and fix if so.
+  var allowed_bots = ["B72TB8DSA",  // BridgeBot
+                     ];
   
-  // Record a bug count whenever the Jira integration announces a transition.
-  controller.hears(['([A-Za-z]+) ([A-Za-z]+) changed Bug (.*) from .* to "Resolved"'], 'ambient,bot_message',
+  // Record a bug count whenever the Jira integration announces a transition. This can
+  // (currently) be detected via an empty text string.
+  controller.on('bot_message',
                    function(bot,message) {
-    console.log("Received a bug resolution message!");
-    console.log(message);
-    if(message.type === 'bot_message' || allowed_users.includes(message.user)) {
-
+    
+    console.log("Received a bot message!");
+    
+    // TODO: filter all bot_message types and match message.attachment[0].pretext against this
+    // regexp
+    var re = /([A-Za-z]+) ([A-Za-z]+) changed Bug (.*) from .* to "Resolved"/i;
+    
+    if(allowed_bots.includes(message.bot_id) && message.attachments[0].pretext) {
+      var match = message.attachments[0].pretext.match(re);
+      
+      console.log("Received a valid bug resolution message!");
+      
       // reply with a random emoji / complement combination
-      var person = message.match[1];
+      var person = match[1];
       var complement = ["Way to go " + person + "!",
                         "Wooooohoooo!",
                         "Squash those bugs, " + person  + "!",
@@ -97,7 +106,7 @@ module.exports = function(controller) {
 
       // store the info on the weekly leaderboards
 
-      var user_id = message.match[1] + " " + message.match[2];
+      var user_id = match[1] + " " + match[2];
 
 
       controller.storage.teams.get(user_id, function(err_outer, data) {
@@ -120,9 +129,6 @@ module.exports = function(controller) {
           });
         }
       });
-
-    } else {
-      bot.whisper(message, "<@${user}>, I think you're trying to cheat!");
     }
   });
 

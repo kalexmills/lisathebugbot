@@ -123,13 +123,75 @@ module.exports = function(controller) {
     });
   });
   
-  // User checks or mentions their squish score.
+  // Action fired whenever the user checks or mentions their squish score.
   controller.hears(['count', 'score', 'bugs', 'killcount', 'squishscore', 'number'], 
                    ['message_received','direct_message'], function(bot, message){
+    // Retrieve user's real name from Slack and store it in real_name
     bot.api.users.info({user: message.user}, (error, response) => {
       let {name, real_name} = response.user;
+      real_name = stripName(real_name);
+      // Use real_name to lookup information we have collected from Jira slackbot
       controller.storage.users.get(real_name, (error, response) => {
-        var check_action = [
+        if(error || !response || !response.bugs){
+          whisperNoBugs(bot,message);
+          console.log(error);
+        } else {
+          whisperScore(bot, message, response.bugs.length);
+        }
+      });
+    });
+  });
+  
+  // Uses bot to whisper a user that they have no recorded bugs
+  // in response to a message.
+  function whisperNoBugs(bot, message) {
+    var exhortation = [
+      "Better get to work!",
+      "Are you really trying?",
+      "Let's pick up the pace!",
+      "Why no bug love from you?",
+      "It's okay, you're probably busy elsewhere.",
+      "The bugs won't fix themselves!"
+    ]
+    bot.whisper(message, "I've " + randomCheckAction() +
+        " and I haven't seen any bugs mentioned for you since the last weekly roundup. " + 
+        rand(exhortation));
+  }
+
+  // Uses bot to whisper a user their score in response to
+  // message. Reports "numBugs" as the user's score.
+  function whisperScore(bot, message, numBugs)  {
+    var cheer = [
+      "Great job!",
+      "Hooray!",
+      "Wonderful work!",
+      "That's a non-zero number!",
+      "Yesssss!",
+      "Good for you!",
+      "Excellent!",
+      "Huzzah!",
+      "Woohooooo!",
+       "You're amazing!"
+    ];
+    var violent_verb = [ 
+      "smashed", 
+      "eviscerated", 
+      "squashed", 
+      "slammed", 
+      "blown-up", 
+      ":zap:",
+      ":boom:",
+      "whacked"
+    ];
+    bot.whisper(message, "I've " + randomCheckAction() +  " and it looks like you've " + 
+      rand(violent_verb) + " " + numBugs + " bugs since the last weekly roundup! " +
+      rand(cheer));
+  }
+  
+  // Generates a random check action for conversation purposes, like
+  // "checked my clipboard", or "queried the database".
+  function randomCheckAction() {
+    var check_action = [
             "checked",
             "queried",
             "glanced at",
@@ -146,52 +208,17 @@ module.exports = function(controller) {
           "data",
           "logs"
         ]
-        if(error || !response || !response.bugs){
-          var exhortation = [
-            "Better get to work!",
-            "Are you really trying?",
-            "Let's pick up the pace!",
-            "Why no bug love from you?",
-            "It's okay, you're probably busy elsewhere.",
-            "The bugs won't fix themselves!"
-          ]
-          bot.whisper(message, "I've " + rand(check_action) + " "
-                      + rand(check_art) + " " + rand(check_object) + " and I haven't seen any bugs mentioned for you since the last weekly roundup! " + rand(exhortation));
-          console.log(error);
-        } else {
-          var cheer = [
-            "Great job!",
-            "Hooray!",
-            "Wonderful work!",
-            "That's a non-zero number!",
-            "Yesssss!",
-            "Good for you!",
-            "Excellent!",
-            "Huzzah!",
-            "Woohooooo!",
-            "You're amazing!"
-          ]
-          var violent_verb = [ "smashed", 
-                              "eviscerated", 
-                              "squashed", 
-                             "slammed", 
-                              "blown-up", 
-                              ":zap:",
-                              ":boom:",
-                              "whacked"
-                             ];
-          bot.whisper(message, "I've " + rand(check_action) + " "
-                      + rand(check_art) + " " + rand(check_object) +  " and it looks like you've " + rand(violent_verb)
-                     + " " + response.bugs.length + " bugs since the last weekly roundup! " + rand(cheer));
-        }
-      });
-    });
-  });
-
-  
+    return rand(check_action) + " " + rand(check_art) + " " + rand(check_object);
+  }
   
   function rand(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
+  }
+  
+  function stripName(real_name) {
+    var re = /([a-zA-z]+) ([a-zA-Z]+)/;
+    var match = real_name.match(re);
+    return match[1] + " " + match[2];
   }
 
 }

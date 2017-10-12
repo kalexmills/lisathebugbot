@@ -71,6 +71,7 @@ var bot_options = {
     scopes: ['bot'],
     studio_command_uri: process.env.studio_command_uri,
     redirectUri: 'https://responsible-plain.glitch.me/oauth',
+    botToken: process.env.botToken
 };
 
 // Use a mongo database if specified, otherwise store in a JSON file local to the app.

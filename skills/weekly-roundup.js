@@ -36,6 +36,7 @@ module.exports = function(controller) {
               return b.bugs.length - a.bugs.length;
             });
             console.log(sorted_users);
+            // TODO: handle ties.
             var first = sorted_users[0];
             var second = sorted_users[1];
             var third = sorted_users[2];
@@ -62,6 +63,57 @@ module.exports = function(controller) {
     'America/Los_Angeles' /* Time-zone to use */
   );
   
+  // Explains the winners for each place. Winners is an array of user ids, place is
+  // a string containing "first", "second", or "third", and num_bugs is how many
+  // bugs each of them squished.
+  var explainWinner = function(winners, place, num_bugs) {
+    var response = "";
+    if(winners.length == 1) {
+      var placed_in_place = [
+        " came in " + place + " place ",
+        " placed in " + place,
+        " scored " + place + " place ",
+        " won " + place + " place"
+      ];
+      
+      var with_num_bugs_squashed = [
+        " with " + num_bugs + " bugs squished!",
+        " having squashed " + num_bugs + " bugs.",
+        " with a total of " + num_bugs + " squished."
+      ];
+      
+      response += winners[0] + rand(placed_in_place) + rand(with_num_bugs_squashed);
+    } else {
+      response += "For " + place + " place, we have a tie!\n";
+      response += winners.join(", ");
+      response += " each placed in " + place + " with " + num_bugs + " squished, each.\n";
+    }
+    return response;
+  }
+  
+  // Gets the top three winners from the list of sorted users -- respecting ties.
+  // The response is an object with three members, "first", "second", and "third", each
+  // of which is an array of user IDs of the individuals who scored that place.
+  var getWinners = function(sorted_users) {
+    var response = {first: [], second: [], third:[]};
+    var i = 0;
+    // Do you *really* need to encapsulate this repeated code in a single function?
+    while(i < sorted_users.length && sorted_users[i].bugs.length == sorted_users[0].bugs.length){
+      response.first.push(sorted_users[i].id);
+      i++;
+    }
+    var second_place_score = sorted_users[i].bugs.length;
+    while(i < sorted_users.length && sorted_users[i].bugs.length == second_place_score) {
+      response.second.push(sorted_users[i].id);
+      i++;
+    }
+    var third_place_score = sorted_users[i].bugs.length;
+    while(i < sorted_users.length && sorted_users[i].bugs.length == third_place_score) {
+      response.third.push(sorted_users[i].id);
+      i++;
+    }
+    return response;
+  }
   
   // Roundup script used on week #4
   var week4 = function(first, second, third) {

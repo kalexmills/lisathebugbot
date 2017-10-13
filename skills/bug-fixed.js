@@ -61,34 +61,48 @@ module.exports = function(controller) {
 
         var user_name = match[1] + " " + match[2];
 
-        controller.storage.users.get(user_name, function(err_outer, data) {
+        // Look up the existing user by their user_name.
+        controller.storage.users.get(user_name, function(err_outer, user_record) {
+          // Create a bug record for this bug.
           var bug_record = {url : match[3], timestamp : message.ts};
-          if(data && data.bugs) {
+          
+          if(user_record && user_record.bugs) {
             // Existing user
+            
 
             // Add new bug to existing array of bug records
-            if(!data.bugs.some(r => { return r.url === match[3];})) {
-              data.bugs.push(bug_record);    
-              controller.storage.users.save({id: user_name, bugs: data.bugs}, function(err_inner) {
-                if(err_inner) {
-                  console.log("Could not add new bug record " + match[3] + " to user " + user_name);
-                  console.log(err_inner);
-                } else {
-                  console.log("Added new bug " + match[3] + " to user "  + user_name);
-                }
-              });
+            if(!user_record.bugs.some(r => { return r.url === match[3];})) {
+              user_record.bugs.push(bug_record);    
+              controller.storage.users.save(
+                  { id: user_name, 
+                    bugs_squished: (user_record.bugs_squished) ? user_record.bugs_squished++ : 0, 
+                    bugs: user_record.bugs
+                  }, 
+                function(err_inner) {
+                  if(err_inner) {
+                    console.log("Could not add new bug record " + match[3] + " to user " + user_name);
+                    console.log(err_inner);
+                  } else {
+                    console.log("Added new bug " + match[3] + " to user "  + user_name);
+                  }
+                });
             }
           } else {
 
-            // New user. Push new record
-            controller.storage.users.save({id:user_name, bugs: [bug_record]}, function(err_inner) {
-              if(err_inner) {
-                console.log("Could not save new bug " + match[3] + " for user "  + user_name);
-                console.log(err_inner);
-              } else {
-                console.log("Persisted new record for user " + user_name);
-              }
-            });
+            // New user. Add a new user record
+            controller.storage.users.save(
+                { id: user_name, 
+                  bugs_squished: 0, 
+                  bugs: [bug_record]
+                }, 
+              function(err_inner) {
+                if(err_inner) {
+                  console.log("Could not save new bug " + match[3] + " for user "  + user_name);
+                  console.log(err_inner);
+                } else {
+                  console.log("Persisted new record for user " + user_name);
+                }
+              });
           }
         });
       }
@@ -132,7 +146,9 @@ module.exports = function(controller) {
       real_name = stripName(real_name);
       // Use real_name to lookup information we have collected from Jira slackbot
       controller.storage.users.get(real_name, (error, response) => {
-        if(error || !response || !response.bugs){
+        if(response && response.bugs_squished) {
+          whisperScore(bot, message, response.bugs_squished);
+        } else if(error || !response || !response.bugs){
           whisperNoBugs(bot,message);
           console.log(error);
         } else {

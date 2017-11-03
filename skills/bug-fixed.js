@@ -75,7 +75,7 @@ module.exports = function(controller) {
               user_record.bugs.push(bug_record);    
               controller.storage.users.save(
                   { id: user_name, 
-                    bugs_squished: (user_record.bugs_squished) ? user_record.bugs_squished++ : 0, 
+                    bugs_squished: user_record.bugs_squished++,
                     bugs: user_record.bugs
                   }, 
                 function(err_inner) {
